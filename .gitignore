@@ -1,0 +1,8 @@
+results*
+tmp*
+*__pycache__*
+submit_ensemble_experiments.sh
+slurm*
+scripts/slurm*
+huggingface*
+private*
