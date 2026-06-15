@@ -7,3 +7,4 @@ scripts/slurm*
 huggingface*
 private*
 example/example_output*.csv
+datasets/data_for_training/

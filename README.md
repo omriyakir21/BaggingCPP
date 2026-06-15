@@ -55,9 +55,9 @@ Cluster sequences and divide the dataset into 5 folds: <br>
 <li>
 Sample and save unlabeled sequences for the different submodels: <br>
 For the inductive setting: <br>
-<code>python -m data_preparation.cross_validation--algorithm_name inductive_pu_learning</code><br>
+<code>python -m data_preparation.ensemble_dataset_creator --algorithm_name inductive_pu_learning</code><br>
 For the transductive setting:<br>
-<code>python -m data_preparation.cross_validation--algorithm_name transductive_pu_learning</code><br></li>
+<code>python -m data_preparation.ensemble_dataset_creator --algorithm_name transductive_pu_learning</code><br></li>
 </ol>
 
 ## Run Training
