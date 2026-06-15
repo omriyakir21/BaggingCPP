@@ -3,7 +3,6 @@ from models.Convolution import CNNModel
 from peft import PeftModel
 from models.dataset import Dataset
 import torch
-from libauc.losses import AUCMLoss
 from bootstrappers.training_arguments import build_training_arguments_from_configuration
 from bootstrappers.trainer import build_trainer_from_configuration
 from transformers import PreTrainedTokenizer
@@ -13,13 +12,11 @@ from models.metrics import calculate_roc_auc
 import copy
 from ignite.engine import Engine, Events
 from ignite.handlers import EarlyStopping
-from libauc.optimizers import PESG
-from libauc.sampler import DualSampler
 import time
 
 def bootstrap_LM_train_function(output_dir:str,logging_dir:str,training_configuration:dict,dataset:Dataset,
                                 optimizer:torch.optim.Optimizer,model:PeftModel,device:torch.device,
-                                loss_fct:Union[torch.nn.Module, AUCMLoss],tokenizer:PreTrainedTokenizer) -> PeftModel:  
+                                loss_fct:Union[torch.nn.Module],tokenizer:PreTrainedTokenizer) -> PeftModel:  
     training_arguments = build_training_arguments_from_configuration(output_dir=output_dir,
         logging_dir=logging_dir,**training_configuration['compile']['training_arguments'])
     train_dataset = Dataset.create_hf_dataset_for_classification(dataset.train_set, dataset.train_labels,tokenizer)
@@ -33,7 +30,7 @@ def bootstrap_LM_train_function(output_dir:str,logging_dir:str,training_configur
 
 def bootstrap_convolution_train_function(output_dir:str,logging_dir:str,training_configuration:dict,dataset:Dataset,
                                 optimizer:torch.optim.Optimizer,model:CNNModel,device:torch.device,
-                                loss_fct:Union[torch.nn.Module, AUCMLoss],tokenizer:PreTrainedTokenizer) -> CNNModel:
+                                loss_fct:Union[torch.nn.Module],tokenizer:PreTrainedTokenizer) -> CNNModel:
     
     writer = SummaryWriter(log_dir=logging_dir)
     
@@ -46,16 +43,7 @@ def bootstrap_convolution_train_function(output_dir:str,logging_dir:str,training
     val_dataset = TensorDataset(X_val, y_val)
     val_loader = DataLoader(val_dataset, batch_size=training_configuration['compile']['training_arguments']['kwargs']['batch_size'],shuffle = True)
     train_dataset = TensorDataset(X_train, y_train)
-    if type(optimizer) == PESG:
-        train_sampler = DualSampler(train_dataset,
-                            batch_size=training_configuration['compile']['training_arguments']['kwargs']['batch_size'],
-                            sampling_rate=0.5,
-                            labels=y_train.cpu().numpy())
-        train_loader = DataLoader(train_dataset,
-                                  batch_size=training_configuration['compile']['training_arguments']['kwargs']['batch_size'],
-                                  sampler=train_sampler)
-    else:
-        train_loader = DataLoader(train_dataset, batch_size=training_configuration['compile']['training_arguments']['kwargs']['batch_size'], shuffle=True)  
+    train_loader = DataLoader(train_dataset, batch_size=training_configuration['compile']['training_arguments']['kwargs']['batch_size'], shuffle=True)  
     
     def roc_score_function(engine):
         print('roc_score_function')

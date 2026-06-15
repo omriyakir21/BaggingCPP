@@ -1,7 +1,5 @@
 import os
-from typing import Union
 import torch
-from libauc.losses import AUCMLoss
 from models.dataset import CrossValidationDataset
 import utils
 import numpy as np
@@ -153,7 +151,7 @@ dataset_to_bootstrapper = {
     'single_model': bootstrap_model_dataset
 }
 
-def build_dataset_from_configuration(name: str,path:str,kwargs: dict) -> Union[torch.nn.Module, AUCMLoss]:
+def build_dataset_from_configuration(name: str,path:str,kwargs: dict) -> torch.nn.Module:
     print(f"keyword arguments for dataset: {kwargs}")
     supported_losses = list(dataset_to_bootstrapper.keys())
     if name not in dataset_to_bootstrapper.keys():
