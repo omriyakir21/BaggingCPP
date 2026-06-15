@@ -1,10 +1,9 @@
-from typing import Tuple, Union
+from typing import  Union
 from transformers import EsmForSequenceClassification, AutoConfig
 from models.Esm2_with_LA import ESMWithLightAttentionHead
 import torch
 from peft import LoraConfig, get_peft_model,PeftModel,TaskType
 import re
-from libauc.losses import AUCMLoss
 import os
 from models.Convolution import CNNModel
 from torchsummary import summary
@@ -103,7 +102,7 @@ def get_lora_model(model: EsmForSequenceClassification, lora_kwargs:dict) -> Pef
     return lora_model
 
 def build_model_from_configuration(name: str, device:torch.device ,
-                                   loss_fct:Union[torch.nn.Module, AUCMLoss],
+                                   loss_fct:Union[torch.nn.Module],
                                    fold_index:int,kwargs: dict) -> Union[torch.nn.Module, PeftModel]:
     
     supported_models = list(model_to_bootstrapper.keys())
