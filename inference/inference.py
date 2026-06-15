@@ -36,12 +36,7 @@ def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list) -> dict:
     if 'test_fold_index' not in df.columns:
         raise ValueError("The input CSV must contain a 'test_fold_index' column.")
     
-    sequences_to_test_folds = {}
-    for _, row in df.iterrows():
-        sequence = row['sequence']
-        fold_index = row['test_fold_index']
-        sequences_to_test_folds[sequence] = fold_index
-
+    sequences_to_test_folds = dict( zip( df['sequence'], df['test_fold_index']  ) )
     # Initialized with integer keys to prevent KeyError later in the script
     fold_to_indices = {0: [], 1: [], 2: [], 3: [], 4: [], -1: []}
     
