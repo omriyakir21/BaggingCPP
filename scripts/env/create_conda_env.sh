@@ -20,7 +20,7 @@ echo "Activating the '$env_name' environment and installing dependencies..."
 conda activate "$env_name"
 
 echo "Installing mmseqs2 via conda..."
-conda install -c bioconda mmseqs2 -y
+conda install -c bioconda -c conda-forge mmseqs2 -y
 
 echo "Installing required packages from requirements.txt..."
 pip install -r scripts/env/requirements_lean.txt
