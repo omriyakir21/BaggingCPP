@@ -6,10 +6,9 @@ from peft import PeftModel
 from transformers import PreTrainedTokenizer, AutoConfig
 from models.dataset import Dataset
 import numpy as np
-from utils import save_as_pickle
 from typing import Union
 from models.Esm2_with_LA import ESMWithLightAttentionHead
-
+from tqdm import tqdm
 def inference(model: Union[PeftModel, ESMWithLightAttentionHead], dataset: Dataset, tokenizer: PreTrainedTokenizer, device: torch.device) -> dict:
     name_to_set = {
         'train': {'data': dataset.train_set, 'labels': dataset.train_labels},
@@ -40,7 +39,8 @@ def predict_binary_probs(model: PeftModel,
                          inputs: dict,
                          device: torch.device,
                          batch_size: int = 512,
-                         return_embeddings: bool = False) -> np.ndarray:
+                         return_embeddings: bool = False,
+                         use_tqdm: bool = False) -> np.ndarray:
     """
     Perform inference using a LoRA fine-tuned model for binary classification in batches.
 
@@ -61,7 +61,11 @@ def predict_binary_probs(model: PeftModel,
     all_embeddings = []
     
     with torch.no_grad():
-        for start in range(0, N, batch_size):
+        if use_tqdm:
+            iterator = tqdm(range(0, N, batch_size), desc="Predicting")
+        else:
+            iterator = range(0, N, batch_size)
+        for start in iterator:
             batch_inputs = {k: v[start:start+batch_size] for k, v in inputs.items()}
             if return_embeddings:
                 outputs = model(**batch_inputs, return_embeddings=return_embeddings)
@@ -85,7 +89,8 @@ def predict_binary_probs_from_sequences(model: PeftModel,
                          tokenizer: PreTrainedTokenizer,
                          device: torch.device,
                          return_embeddings:bool = False,
-                         batch_size: int = 512) -> np.ndarray:
+                         batch_size: int = 512,
+                         use_tqdm: bool = False) -> np.ndarray:
     """
     Perform inference using a LoRA fine-tuned model for binary classification in batches.
 
@@ -101,7 +106,7 @@ def predict_binary_probs_from_sequences(model: PeftModel,
     """
     
     inputs = tokenizer(sequences, truncation=True, padding="max_length", max_length=50, return_tensors='pt')
-    outputs = predict_binary_probs(model=model, inputs=inputs, device=device, batch_size=batch_size, return_embeddings=return_embeddings)
+    outputs = predict_binary_probs(model=model, inputs=inputs, device=device, batch_size=batch_size, return_embeddings=return_embeddings, use_tqdm=use_tqdm)
     return outputs
 
 def load_esm2_with_LA_lora_model(model_path:str, device:torch.device,model_name:str,num_labels:int, dout:int, kernel_size:int,use_max:bool):
