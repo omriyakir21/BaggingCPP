@@ -4,32 +4,51 @@ import numpy as np
 import subprocess
 import pandas as pd
 import utils
+from typing import List
 
-def cluster_sequences(list_sequences, seqid=1.0, coverage=0.8, covmode='0', path2mmseqstmp="tmp/mmseqs",path2mmseqs='mmseqs'):
+def cluster_sequences(
+    list_sequences: List[str],
+    mmseqs_tmp_dir: str="tmp/mmseqs",
+    seqid: float = 1.0,
+    coverage: float = 0.8,
+    covmode: str = "0",
+    clustering_mode: str = "0",
+    threads: int = os.cpu_count(),
+):
+
     rng = np.random.randint(0, high=int(1e6))
-    tmp_input = os.path.join(path2mmseqstmp, 'tmp_input_file_%s.fasta' % rng)
-    tmp_output = os.path.join(path2mmseqstmp, 'tmp_output_file_%s' % rng)
+    tmp_input = os.path.join(mmseqs_tmp_dir, "tmp_input_file_%s.fasta" % rng)
+    tmp_output = os.path.join(mmseqs_tmp_dir, "tmp_output_file_%s" % rng)
 
-    with open(tmp_input, 'w') as f:
+    with open(tmp_input, "w") as f:
         for k, sequence in enumerate(list_sequences):
-            f.write('>%s\n' % k)
-            f.write('%s\n' % sequence)
+            f.write(">%s\n" % k)
+            f.write("%s\n" % sequence)
 
-    command = ('{mmseqs} easy-cluster {fasta} {result} {tmp} --min-seq-id %s -c %s --cov-mode %s' % (
-        seqid, coverage, covmode)).format(mmseqs=path2mmseqs, fasta=tmp_input, result=tmp_output, tmp=path2mmseqstmp)
-    subprocess.run(command.split(' '))
-    print(f'command = {command}')
+    command = (
+        f"mmseqs easy-cluster {tmp_input} {tmp_output} {mmseqs_tmp_dir} "
+        f"--threads {threads} --min-seq-id {seqid} -c {coverage} --cov-mode {covmode} --cluster-mode {clustering_mode}"
+    )
+    subprocess.run(command.split(" "))
 
-    with open(tmp_output + '_rep_seq.fasta', 'r') as f:
+    with open(tmp_output + "_rep_seq.fasta", "r") as f:
         representative_indices = [int(x[1:-1]) for x in f.readlines()[::2]]
     cluster_indices = np.zeros(len(list_sequences), dtype=int)
-    table = pd.read_csv(tmp_output + '_cluster.tsv', sep='\t', header=None).to_numpy(dtype=int)
+    table = pd.read_csv(tmp_output + "_cluster.tsv", sep="\t", header=None).to_numpy(
+        dtype=int
+    )
     for i, j in table:
         if i in representative_indices:
             cluster_indices[j] = representative_indices.index(i)
-    for file in [tmp_output + '_rep_seq.fasta', tmp_output + '_all_seqs.fasta', tmp_output + '_cluster.tsv']:
+    for file in [
+        tmp_output + "_rep_seq.fasta",
+        tmp_output + "_all_seqs.fasta",
+        tmp_output + "_cluster.tsv",
+    ]:
         os.remove(file)
     return np.array(cluster_indices), np.array(representative_indices)
+
+
 
 def create_cluster_participants_indices(cluster_indices):
     clustersParticipantsList = []
