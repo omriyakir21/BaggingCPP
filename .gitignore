@@ -6,4 +6,4 @@ slurm*
 scripts/slurm*
 huggingface*
 private*
-example/example_output.csv
+example/example_output*.csv

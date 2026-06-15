@@ -47,7 +47,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     use_max = True
-    device = 'cuda' if torch.cuda.is_available() else 'cpu' 
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(f'Running on device {device}')
 
     sequences, keys = read_fasta(args.sequences_fasta)
     # folds_training_dicts = load_as_pickle(args.folds_training_dicts_path)

@@ -31,32 +31,36 @@ Run inference using the model from huggingface:<br>
     --use_huggingface_repo \
 </code>
 
-# Data preparation and Training from scratch
+# Data Preparation and Training From Scratch
 
 This is the code for retraining from scratch the original model. It can be easily adapted to any other PU learning classification task over peptides.
 
-The raw data should be provided as a .csv file (see: datasets/full_datasets/bagging_cpp_dataset.csv), with the following fields: 
+The raw data should be provided as a .csv file (see: datasets/full_datasets/bagging_cpp_dataset.csv), with the following columns: 
+- id: unique ID per sequence [e.g.: Seq1, ... ]
+- sequence: amino acid sequence [e.g.: ACDEFG]
+- source: optional source database [e.g.: SmProt2, NeuroPep]
+- description: optional sequence description [e.g.:  ]
+- label: 0/1 (1 for positive instances, 0 for unlabeled)
 
-id,sequence,source,description,label,cluster_id,fold_id
+In bagging_cpp_dataset.csv, we also provide the cluster_id and fold_id used in the article, but these columns are generated in the next steps.
 
 
-## Data preparation
-
+## Data Preparation
 
 
 <ol start="1">
 <li>
-Divide the dataset into 5 folds: <br>
-<code>python -m python -m data_preparation.cross_validation</code></li>
+Cluster sequences and divide the dataset into 5 folds: <br>
+<code>python -m data_preparation.cross_validation</code></li>
 <li>
 Sample and save unlabeled sequences for the different submodels: <br>
 For the inductive setting: <br>
-<code>python -m python -m data_preparation.cross_validation --algorithm_name --algorithm_name inductive_pu_learning</code><br>
+<code>python -m data_preparation.cross_validation--algorithm_name inductive_pu_learning</code><br>
 For the transductive setting:<br>
-<code>python -m python -m data_preparation.cross_validation --algorithm_name --algorithm_name transductive_pu_learning</code><br></li>
+<code>python -m data_preparation.cross_validation--algorithm_name transductive_pu_learning</code><br></li>
 </ol>
 
-## Run training
+## Run Training
 <ol start="1">
 <li>
 For each of the configurations under <code>configurations/data/{ensemble_inductive_pu_learning or ensemble_transductive_pu_learning}</code>, run: <br>
@@ -65,6 +69,8 @@ For each of the configurations under <code>configurations/data/{ensemble_inducti
 e.g. <code> python -m models.train --config configurations/data/ensemble_inductive_pu_learning/groups_inductive_index_0.json
 </code><br></li>
 </ol>
+
+To regenerate configuration files with different hyperparameters, see the notebooks in configurations/build/ .
 
 ## Generate prediction tables in the transductive setting:
 After training the ensemble, run:<br>
