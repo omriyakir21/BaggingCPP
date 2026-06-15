@@ -9,7 +9,6 @@ scikit-learn
 pandas
 tqdm
 plotly
-libauc
 ignite
 huggingface-hub
 matplotlib

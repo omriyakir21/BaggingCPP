@@ -7,4 +7,11 @@ scripts/slurm*
 huggingface*
 private*
 example/example_output*.csv
+research*
+.vscode*
 datasets/data_for_training/
+inference/predictions.csv
+inference/predictions_huggingface_model.csv
+inference/sequences_fasta_example.fasta
+scripts/bash/
+test_downloaded_repo/
