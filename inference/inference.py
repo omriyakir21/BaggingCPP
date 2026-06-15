@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment', default="groups_inductive", help='Experiment name under results/hypothesis/experiment.')
     parser.add_argument('--model_name', default="facebook/esm2_t6_8M_UR50D", help='Name of the ESM2 model to use.')
     parser.add_argument('--num_submodels', type=int, default=50, help='Number of submodels in the ensemble.')
-    parser.add_argument('--huggingface_model_folder_path', default="huggingface_repo/model_folder", help='Path to the Hugging Face model folder containing the ensemble submodel folders.')
+    parser.add_argument('--huggingface_model_folder_path', default="huggingface_repo/ensemble", help='Path to the Hugging Face model folder containing the ensemble submodel folders.')
     parser.add_argument('--folds_training_dicts_path', help='Path to the folds training dictionaries pickle file, required if --use_huggingface_repo is not set.')
     parser.add_argument('--num_labels', type=int, default=1, help='Number of labels for classification.')
     parser.add_argument('--dout', type=int, default=128, help='Output dimension for the light attention head.')
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu' 
 
     sequences, keys = read_fasta(args.sequences_fasta)
-    folds_training_dicts = load_as_pickle(args.folds_training_dicts_path)
+    # folds_training_dicts = load_as_pickle(args.folds_training_dicts_path)
     if not args.use_huggingface_repo:
         base_paths, submodels_to_run = get_experiment_base_paths_for_ensemble(experiment=args.experiment,
                                                         base_paths={},
@@ -58,7 +58,8 @@ if __name__ == '__main__':
                                                         num_submodels=args.num_submodels)
         base_paths_list = list(base_paths[args.experiment])
 
-    indexes_dict = get_fold_indexes(fold_training_dicts=folds_training_dicts,sequences=sequences)
+    # indexes_dict = get_fold_indexes(fold_training_dicts=folds_training_dicts,sequences=sequences)
+    indexes_dict = {0:[],1:[],2:[],3:[],4:[],-1: list(range(len(sequences))) }
     tokenizer = load_tokenizer(model_name=args.model_name)
     ordered_predictions = np.empty(len(sequences), dtype=float)
     non_specific_predictions = []
