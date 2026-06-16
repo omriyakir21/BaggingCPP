@@ -97,6 +97,7 @@ if __name__ == '__main__':
     ordered_std = np.empty(len(sequences), dtype=float)
     non_specific_predictions = []
     non_specific_sequences = [sequences[i] for i in indexes_dict[-1]]
+    model = None
     for fold in tqdm(range(work_dict['num_folds']), desc=f"Predicting using ensemble"):
         fold_indices = indexes_dict[fold]
         specific_fold_sequences = [sequences[i] for i in indexes_dict[fold]]
@@ -110,7 +111,8 @@ if __name__ == '__main__':
                     model_path = os.path.join(work_dict['huggingface_model_folder_path'] ,f'submodel_{index}',f'fold_{fold}','model')
 
                 model = load_esm2_with_LA_lora_model(model_path=model_path,device=device,model_name=work_dict['model_name'],
-                                                    num_labels=work_dict['num_labels'],dout=work_dict['dout'],kernel_size=work_dict['kernel_size'],use_max=work_dict['use_max'])
+                                                    num_labels=work_dict['num_labels'],dout=work_dict['dout'],kernel_size=work_dict['kernel_size'],
+                                                    use_max=work_dict['use_max'],model=model)
                 if len(specific_fold_sequences) > 0:
                     fold_specific_predictions.append(predict_binary_probs_from_sequences(model=model,device=device,
                                                                             sequences=specific_fold_sequences,

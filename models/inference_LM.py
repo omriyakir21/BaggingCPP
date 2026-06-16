@@ -1,14 +1,13 @@
 import torch
-import os
-import sys
 sys
 from peft import PeftModel
 from transformers import PreTrainedTokenizer, AutoConfig
 from models.dataset import Dataset
 import numpy as np
-from typing import Union
+from typing import Optional, Union
 from models.Esm2_with_LA import ESMWithLightAttentionHead
 from tqdm import tqdm
+
 def inference(model: Union[PeftModel, ESMWithLightAttentionHead], dataset: Dataset, tokenizer: PreTrainedTokenizer, device: torch.device) -> dict:
     name_to_set = {
         'train': {'data': dataset.train_set, 'labels': dataset.train_labels},
@@ -109,30 +108,35 @@ def predict_binary_probs_from_sequences(model: PeftModel,
     outputs = predict_binary_probs(model=model, inputs=inputs, device=device, batch_size=batch_size, return_embeddings=return_embeddings, use_tqdm=use_tqdm)
     return outputs
 
-def load_esm2_with_LA_lora_model(model_path:str, device:torch.device,model_name:str,num_labels:int, dout:int, kernel_size:int,use_max:bool):
-    """
-    Load a LoRA fine-tuned ESM-2 model with light attention.
-    Args:
-        model_path: Path to the LoRA fine-tuned model.
-        device:     Device on which to load the model.
-        model_name: Name of the base ESM-2 model.
-        num_labels: Number of labels for classification.
-        dout:       Output dimension for the light attention head.
-        kernel_size: Kernel size for the light attention head.
-    Returns:
-        model:      The LoRA fine-tuned ESM-2 model.
-    """
-    from models.Esm2_with_LA import ESMWithLightAttentionHead
-    esm2_config = AutoConfig.from_pretrained(model_name) 
-    esm2_config.num_labels = num_labels
-    esm2_config.dout = dout
-    esm2_config.kernel_size = kernel_size 
-    esm2_config.use_max = use_max
+def load_esm2_with_LA_lora_model(model_path: str,
+                                 device: torch.device,
+                                 model_name: str,
+                                 num_labels: int,
+                                 dout: int,
+                                 kernel_size: int,
+                                 use_max: bool,
+                                 model: Optional[Union[PeftModel, ESMWithLightAttentionHead]] = None):
+    
+    # 1. If it's a PeftModel, strip the old adapter entirely
+    if isinstance(model, PeftModel):
+        # unload() removes the PEFT wrapper and returns the base PyTorch model
+        model = model.unload() 
 
-    model = ESMWithLightAttentionHead(config=esm2_config,device=device,loss_fct=None)
+    # 2. If no model was provided at all, build from scratch
+    elif model is None:
+        esm2_config = AutoConfig.from_pretrained(model_name)
+        esm2_config.num_labels = num_labels
+        esm2_config.dout = dout
+        esm2_config.kernel_size = kernel_size
+        esm2_config.use_max = use_max
+
+        model = ESMWithLightAttentionHead(config=esm2_config, device=device, loss_fct=None)
+
+    # 3. Load the new LoRA adapter onto the clean base model
+    # (Since model is now definitely a base model, this works flawlessly)
     lora_model = PeftModel.from_pretrained(model, model_path)
-    lora_model = lora_model.to(device)
-    return lora_model
+    
+    return lora_model.to(device)
 
 def load_tokenizer(model_name:str):
     """
