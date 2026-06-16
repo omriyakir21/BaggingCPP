@@ -103,3 +103,10 @@ If you want to average the results of the 5 ensembles (no cross predictions) use
     --use_custom_model \
     --no_cross_predictions
 </code>
+
+
+## License
+
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License - see the [LICENSE](LICENSE) file for details.
+
+[![License: CC BY-NC 4.0](https://img.shields.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
