@@ -11,7 +11,7 @@ Cell-penetrating peptides (CPPs) are a promising approach for the intracellular 
 A conda distribution is required. To create the conda and python environment, run: <br>
 <code>bash scripts/env/create_conda_env.sh </code>
 
-To activate the environment, run: <br> <code>activate BaggingCPP3 </code>
+To activate the environment, run: <br> <code>activate BaggingCPP </code>
 
 ## Downloading model weights from HuggingFace
 
@@ -27,12 +27,16 @@ Run inference using the model from huggingface:<br>
     --sequences_fasta example/example.fasta  \
     --output_csv example/example_output.csv
 </code>
+
+Note that, by construction, if a test sequence appears in the unlabeled training set, it was used as a **negative** for some of the models, leading to underestimation of its CPP probability. To correct for this bias, by default, the script checks, for each sequence, whether it appears in the training set and, if yes, in which fold. It then only uses one of the model ensembles that was not trained on this sequence to make prediction. For sequences that are not part of the training set, it averages the results of the 5 ensembles (250 models in total).
+
 <br>
-If you want to average the results of the 5 ensembles (no cross predictions) use:
+If you want to average the results of the 5 ensembles (no cross predictions) for all sequences, use:
 <code>python -m inference.inference \
     --sequences_fasta example/example.fasta  \
     --output_csv example/example_output.csv \
     --no_cross_predictions</code>
+
 # Data Preparation and Training From Scratch
 
 This is the code for retraining from scratch the original model. It can be easily adapted to any other PU learning classification task over peptides.
@@ -44,7 +48,7 @@ The raw data should be provided as a .csv file (see: datasets/full_datasets/bagg
 - description: optional sequence description [e.g.:  ]
 - label: 0/1 (1 for positive instances, 0 for unlabeled)
 
-In bagging_cpp_dataset.csv, we also provide the cluster_id and fold_id used in the article, but these columns are generated in the next steps.
+In bagging_cpp_dataset.csv, we also provide the fold_id used in the article, but these columns are generated in the next steps.
 
 
 ## Data Preparation

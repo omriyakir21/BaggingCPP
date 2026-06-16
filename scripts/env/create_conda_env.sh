@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail # tweaks Bash error handling
-env_name="BaggingCPP3"
+env_name="BaggingCPP"
 
 if conda env list | grep -q "$env_name"; then
     echo "Removing existing conda environment '$env_name'..."
