@@ -210,8 +210,14 @@ def run_cross_validation(results_folder_path: str,
             )
 
 if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f'Using device: {device}')
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    print(f"Using device: {device}")
     
     train_configuration = load_configuration()
     results_folder_path = build_results_folder_path_from_configuration(

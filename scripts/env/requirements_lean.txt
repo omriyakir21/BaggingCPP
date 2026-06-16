@@ -9,10 +9,10 @@ scikit-learn
 pandas
 tqdm
 plotly
-ignite
 huggingface-hub
 matplotlib
 seaborn
 scipy
 ipython
 datasets
+tensorboard

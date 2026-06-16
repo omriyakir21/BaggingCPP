@@ -71,8 +71,14 @@ if __name__ == '__main__':
                          'use_max': True
 }
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print(f'Running on device {device}')
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    print(f"Using device: {device}")
 
     sequences, keys = read_fasta(args.sequences_fasta)
 
