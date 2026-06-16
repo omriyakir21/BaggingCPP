@@ -1,4 +1,4 @@
-Copyright (c) [2026] [Omri Yakir \& J\'er\^ome Tubiana, Tel Aviv University]
+Copyright (c) [2026] [Omri Yakir \& Jerome Tubiana, Tel Aviv University]
 Licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (the "License").
 Attribution-NonCommercial 4.0 International
 
