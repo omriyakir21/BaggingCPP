@@ -11,7 +11,7 @@ Cell-penetrating peptides (CPPs) are a promising approach for the intracellular 
 A conda distribution is required. To create the conda and python environment, run: <br>
 <code>bash scripts/env/create_conda_env.sh </code>
 
-To activate the environment, run: <br> <code>activate BaggingCPP </code>
+To activate the environment, run: <br> <code>activate BaggingCPP3 </code>
 
 ## Downloading model weights from HuggingFace
 
