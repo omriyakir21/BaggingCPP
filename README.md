@@ -83,9 +83,7 @@ For AUC-ROC calculation(only valid for the inductive setting),run the notebook:<
 ## Run inference over the inductive pu learning trained ensemble:
 In order to run inference using the trained model do: <br>
 <code>python -m inference.inference \
-    --sequences_fasta {path to fasta with sequences} \
-    --output_csv {path to output csv} \
-    --hypothesis ensemble_inductive_pu_learning \
-    --experiment groups_inductive \
-    --folds_training_dicts_path datasets/data_for_training/folds_training_dicts.pkl
+    --sequences_fasta example/example.fasta \
+    --output_csv inference/predictions.csv \
+    --use_custom_model
 </code>

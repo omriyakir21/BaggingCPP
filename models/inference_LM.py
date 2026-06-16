@@ -1,5 +1,5 @@
 import torch
-sys
+import sys
 from peft import PeftModel
 from transformers import PreTrainedTokenizer, AutoConfig
 from models.dataset import Dataset
