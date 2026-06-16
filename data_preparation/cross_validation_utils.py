@@ -33,13 +33,16 @@ def cluster_sequences(
 
     with open(tmp_output + "_rep_seq.fasta", "r") as f:
         representative_indices = [int(x[1:-1]) for x in f.readlines()[::2]]
+        representative_indices_dict = {representative_indices[k]:k for k in range(len(representative_indices)) }
+        
     cluster_indices = np.zeros(len(list_sequences), dtype=int)
     table = pd.read_csv(tmp_output + "_cluster.tsv", sep="\t", header=None).to_numpy(
         dtype=int
     )
     for i, j in table:
-        if i in representative_indices:
-            cluster_indices[j] = representative_indices.index(i)
+        k = representative_indices_dict.get(i)
+        if k is not None:
+            cluster_indices[j] = k
     for file in [
         tmp_output + "_rep_seq.fasta",
         tmp_output + "_all_seqs.fasta",
@@ -122,7 +125,7 @@ def partition_to_folds_and_save(data_for_training_dir: str, dataset_path: str, n
     ids = np.array(df['id'].tolist())
     descriptions = np.array(df['description'].tolist())
     print('Read dataset')
-    cluster_indices, _ = cluster_sequences(sequences, seqid=0.5, coverage=0.4,path2mmseqstmp="tmp/mmseqs",path2mmseqs='mmseqs')
+    cluster_indices, _ = cluster_sequences(sequences, seqid=0.5, coverage=0.4,mmseqs_tmp_dir="tmp/mmseqs")
     print('Clustered sequences')
     utils.save_as_pickle(cluster_indices, os.path.join(data_for_training_dir, 'cluster_indices.pkl'))
     print('Saved cluster indices')

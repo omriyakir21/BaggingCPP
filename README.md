@@ -25,10 +25,7 @@ Jerome the huggingface model and data is still private,so use:<br>
 Run inference using the model from huggingface:<br>
 <code>python -m inference.inference \
     --sequences_fasta example/example.fasta  \
-    --output_csv example/example_output.csv \
-    --folds_training_dicts_path huggingface_repo/data_folder/folds_training_dicts.pkl \
-    --huggingface_model_folder_path huggingface_repo/model_folder/ensemble \
-    --use_huggingface_repo \
+    --output_csv example/example_output.csv
 </code>
 
 # Data Preparation and Training From Scratch
