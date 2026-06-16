@@ -1,4 +1,4 @@
-results*
+results/*
 tmp*
 *__pycache__*
 submit_ensemble_experiments.sh
