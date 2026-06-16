@@ -27,7 +27,12 @@ Run inference using the model from huggingface:<br>
     --sequences_fasta example/example.fasta  \
     --output_csv example/example_output.csv
 </code>
-
+<br>
+If you want to average the results of the 5 ensembles (no cross predictions) use:
+<code>python -m inference.inference \
+    --sequences_fasta example/example.fasta  \
+    --output_csv example/example_output.csv \
+    --no_cross_predictions</code>
 # Data Preparation and Training From Scratch
 
 This is the code for retraining from scratch the original model. It can be easily adapted to any other PU learning classification task over peptides.
@@ -61,7 +66,7 @@ For the transductive setting:<br>
 <ol start="1">
 <li>
 For each of the configurations under <code>configurations/data/{ensemble_inductive_pu_learning or ensemble_transductive_pu_learning}</code>, run: <br>
-<code> python -m models.train --config path_to_configuration
+<code> python -m models.train --config {path_to_configuration}
 </code><br>
 e.g. <code> python -m models.train --config configurations/data/ensemble_inductive_pu_learning/groups_inductive_index_0.json
 </code><br></li>
@@ -86,4 +91,11 @@ In order to run inference using the trained model do: <br>
     --sequences_fasta example/example.fasta \
     --output_csv inference/predictions.csv \
     --use_custom_model
+</code>
+If you want to average the results of the 5 ensembles (no cross predictions) use:
+<code>python -m inference.inference \
+    --sequences_fasta example/example.fasta \
+    --output_csv inference/predictions.csv \
+    --use_custom_model \
+    --no_cross_predictions
 </code>

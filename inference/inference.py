@@ -28,7 +28,7 @@ def read_fasta(fasta_path:str)->Tuple[List[str],List[str]]:
                 sequences.append(line)
     return sequences, keys
     
-def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list) -> dict:
+def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list, no_cross_predictions: bool = False) -> dict:
     """
     Reads the bagging_cpp_dataset.csv file and creates a dictionary mapping fold indices to lists of sequence indices.
     """
@@ -40,6 +40,11 @@ def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list) -> dict:
     # Initialized with integer keys to prevent KeyError later in the script
     fold_to_indices = {0: [], 1: [], 2: [], 3: [], 4: [], -1: []}
     
+    if no_cross_predictions:
+        # If no_cross_predictions is True, we will only use the -1 fold for all sequences
+        fold_to_indices[-1] = list(range(len(sequences)))
+        return fold_to_indices 
+
     # Using enumerate avoids the O(N^2) complexity of sequences.index(sequence)
     for idx, sequence in enumerate(sequences):
         fold_index = sequences_to_test_folds.get(sequence, -1)
@@ -55,6 +60,7 @@ if __name__ == '__main__':
     parser.add_argument('--sequences_fasta', required=True, help='Path to the input sequences in FASTA format.')
     parser.add_argument('--output_csv', required=True, help='Path to save the output predictions CSV file.')
     parser.add_argument('--use_custom_model', action='store_true', help='Flag to indicate if a custom model should be used.')
+    parser.add_argument('--no_cross_predictions', action='store_true', help='Flag to indicate if cross-predictions should be disabled.')
     parser.add_argument('--batch_size', type=int, default=64, help='Batch size for prediction.')
     args = parser.parse_args()
 
@@ -91,7 +97,9 @@ if __name__ == '__main__':
 
    
     indexes_dict = get_indexes_dict(bagging_cpp_dataset_path=work_dict['bagging_cpp_dataset_path'],\
-                                    sequences=sequences)
+                                    sequences=sequences, no_cross_predictions=args.no_cross_predictions)
+    for i in range(-1, work_dict['num_folds']):
+        print(f'Fold {i} has {len(indexes_dict[i])} sequences to predict on.')
     tokenizer = load_tokenizer(model_name=work_dict['model_name'])
     ordered_predictions = np.empty(len(sequences), dtype=float)
     ordered_std = np.empty(len(sequences), dtype=float)

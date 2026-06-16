@@ -16,3 +16,4 @@ inference/sequences_fasta_example.fasta
 scripts/bash/
 test_downloaded_repo/
 datasets/full_datasets/bagging_cpp_dataset_before.csv
+inference/predictions_huggingface_model_no_cross_predictions.csv
