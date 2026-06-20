@@ -32,18 +32,18 @@ def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list, no_cross_pr
     """
     Reads the bagging_cpp_dataset.csv file and creates a dictionary mapping fold indices to lists of sequence indices.
     """
+    # Initialized with integer keys to prevent KeyError later in the script
+    fold_to_indices = {0: [], 1: [], 2: [], 3: [], 4: [], -1: []}    
+    if no_cross_predictions:
+        # If no_cross_predictions is True, we will only use the -1 fold for all sequences
+        fold_to_indices[-1] = list(range(len(sequences)))
+        return fold_to_indices
+        
     df = pd.read_csv(bagging_cpp_dataset_path)
     if 'test_fold_index' not in df.columns:
         raise ValueError("The input CSV must contain a 'test_fold_index' column.")
     
     sequences_to_test_folds = dict( zip( df['sequence'], df['test_fold_index']  ) )
-    # Initialized with integer keys to prevent KeyError later in the script
-    fold_to_indices = {0: [], 1: [], 2: [], 3: [], 4: [], -1: []}
-    
-    if no_cross_predictions:
-        # If no_cross_predictions is True, we will only use the -1 fold for all sequences
-        fold_to_indices[-1] = list(range(len(sequences)))
-        return fold_to_indices 
 
     # Using enumerate avoids the O(N^2) complexity of sequences.index(sequence)
     for idx, sequence in enumerate(sequences):
@@ -62,12 +62,13 @@ if __name__ == '__main__':
     parser.add_argument('--use_custom_model', action='store_true', help='Flag to indicate if a custom model should be used.')
     parser.add_argument('--no_cross_predictions', action='store_true', help='Flag to indicate if cross-predictions should be disabled.')
     parser.add_argument('--batch_size', type=int, default=64, help='Batch size for prediction.')
+    parser.add_argument('--num_submodels_max', type=int, default=50, help='Maximum number of submodels to use (set e.g. to 10 to speed-up inference)')
     args = parser.parse_args()
 
     work_dict = {'hypothesis':'ensemble_inductive_pu_learning', 
                          'experiment': 'groups_inductive',
                          'model_name': 'facebook/esm2_t6_8M_UR50D', 
-                         'num_submodels': 50, 
+                         'num_submodels': min(50 , args.num_submodels_max), 
                          'num_folds': 5,
                          'huggingface_model_folder_path': 'huggingface_repo/ensemble', 
                          'bagging_cpp_dataset_path': 'datasets/full_datasets/bagging_cpp_dataset.csv',
