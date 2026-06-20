@@ -70,7 +70,7 @@ if __name__ == '__main__':
                          'model_name': 'facebook/esm2_t6_8M_UR50D', 
                          'num_submodels': min(50 , args.num_submodels_max), 
                          'num_folds': 5,
-                         'huggingface_model_folder_path': 'huggingface_repo/ensemble', 
+                         'model_folder_path': 'results_upload/model_folder/ensemble', 
                          'bagging_cpp_dataset_path': 'datasets/full_datasets/bagging_cpp_dataset.csv',
                          'num_labels': 1, 
                          'dout': 128, 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
                 if args.use_custom_model:
                     model_path = os.path.join(base_paths_list[index], f'fold_{fold}', 'model')     
                 else:
-                    model_path = os.path.join(work_dict['huggingface_model_folder_path'] ,f'submodel_{index}',f'fold_{fold}','model')
+                    model_path = os.path.join(work_dict['model_folder_path'] ,f'submodel_{index}',f'fold_{fold}','model')
 
                 model = load_esm2_with_LA_lora_model(model_path=model_path,device=device,model_name=work_dict['model_name'],
                                                     num_labels=work_dict['num_labels'],dout=work_dict['dout'],kernel_size=work_dict['kernel_size'],
