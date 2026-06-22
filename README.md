@@ -13,16 +13,9 @@ A conda distribution is required. To create the conda and python environment, ru
 
 To activate the environment, run: <br> <code>activate BaggingCPP </code>
 
-## Downloading model weights from HuggingFace
-
-In order to download the models ensemble run:
-Jerome the huggingface model and data is still private,so use:<br>
-<code>/home/iscb/wolfson/omriyakir/BaggingCPP/huggingface/download_test.py</code> for testing, I'll make everything public when we will publish. <br>
-
-
 # Model Inference
 
-Run inference using the model from huggingface:<br>
+Run inference:<br>
 <code>python -m inference.inference \
     --sequences_fasta example/example.fasta  \
     --output_csv example/example_output.csv
