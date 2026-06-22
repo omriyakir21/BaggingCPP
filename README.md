@@ -5,6 +5,9 @@
 
 Cell-penetrating peptides (CPPs) are a promising approach for the intracellular delivery of diverse molecular cargos. However, although hundreds of CPPs have been characterized, most are cationic peptides with poor pharmacoproperties or limited uptake efficiency; new high-throughput discovery approaches are thus imperative. Here, we introduce BaggingCPP, a deep learning-based CPP virtual screening framework that integrates protein language models, Positive-Unlabeled (PU) learning and parameter-efficient fine-tuning algorithms. Unlike prior works, we do not use an artificial negative set on which to train the model. Instead, we use PU learning to directly train and infer on the candidate library  - a large collection of naturally expressed peptides such as hormones, neuropeptides, and small proteins. We show that BaggingCPP is competitive with the state-of-the-art model GraphCPP when training and evaluating on the standard public CPP1708 benchmark. More importantly, we demonstrate that the PU learning formulation effectively addresses the distribution shift and prediction stability problems commonly encountered in the standard train-then-screen protocol, thereby significantly reducing the false positive rate. Using BaggingCPP, we identified and experimentally validated several CPPs with low similarity to known CPPs, including two with higher uptake efficiency than the gold-standard TAT peptide. The latter are cyclic peptides that may penetrate via GPCR-mediated endocytosis - a relatively rare mechanism of entry. BaggingCPP thus represents a data-driven approach to expand the chemical diversity of CPPs.
 
+# Cloning
+Cloning the repository with Github Desktop on Mac fails -> Use the command line utility git clone.
+
 # Installation
 
 ## Python Environment Setup
