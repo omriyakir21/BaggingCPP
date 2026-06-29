@@ -55,50 +55,56 @@ def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list, no_cross_pr
             
     return fold_to_indices
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Predict using LoRA LA ensemble model.')
-    parser.add_argument('--sequences_fasta', required=True, help='Path to the input sequences in FASTA format.')
-    parser.add_argument('--output_csv', required=True, help='Path to save the output predictions CSV file.')
-    parser.add_argument('--use_custom_model', action='store_true', help='Flag to indicate if a custom model should be used.')
-    parser.add_argument('--no_cross_predictions', action='store_true', help='Flag to indicate if cross-predictions should be disabled.')
-    parser.add_argument('--batch_size', type=int, default=64, help='Batch size for prediction.')
-    parser.add_argument('--num_submodels_max', type=int, default=50, help='Maximum number of submodels to use (set e.g. to 10 to speed-up inference)')
-    args = parser.parse_args()
+def get_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
+    else:
+        return torch.device("cpu")
 
-    work_dict = {'hypothesis':'ensemble_inductive_pu_learning', 
+
+def predict(sequences_fasta: str,
+            output_csv: str,
+            use_custom_model: bool = False,
+            no_cross_predictions: bool = False,
+            batch_size: int = 64,
+            num_submodels_max: int = 50,
+            device: torch.device = None) -> pd.DataFrame:
+    """
+    Run the LoRA LA ensemble prediction on the sequences in `sequences_fasta`,
+    save the results to `output_csv` and return the predictions DataFrame.
+    """
+    work_dict = {'hypothesis':'ensemble_inductive_pu_learning',
                          'experiment': 'groups_inductive',
-                         'model_name': 'facebook/esm2_t6_8M_UR50D', 
-                         'num_submodels': min(50 , args.num_submodels_max), 
+                         'model_name': 'facebook/esm2_t6_8M_UR50D',
+                         'num_submodels': min(50 , num_submodels_max),
                          'num_folds': 5,
-                         'model_folder_path': 'results_upload/model_folder/ensemble', 
+                         'model_folder_path': 'results_upload/model_folder/ensemble',
                          'bagging_cpp_dataset_path': 'datasets/full_datasets/bagging_cpp_dataset.csv',
-                         'num_labels': 1, 
-                         'dout': 128, 
-                         'kernel_size': 7, 
+                         'num_labels': 1,
+                         'dout': 128,
+                         'kernel_size': 7,
                          'use_max': True
 }
 
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
+    if device is None:
+        device = get_device()
 
     print(f"Using device: {device}")
 
-    sequences, keys = read_fasta(args.sequences_fasta)
+    sequences, keys = read_fasta(sequences_fasta)
 
-    if args.use_custom_model:
+    if use_custom_model:
         base_paths, submodels_to_run = get_experiment_base_paths_for_ensemble(experiment=work_dict['experiment'],
                                                         base_paths={},
                                                         hypothesis_path=os.path.join('results', 'hypothesis', work_dict['hypothesis']),
                                                         num_submodels=work_dict['num_submodels'])
         base_paths_list = list(base_paths[work_dict['experiment']])
 
-   
+
     indexes_dict = get_indexes_dict(bagging_cpp_dataset_path=work_dict['bagging_cpp_dataset_path'],\
-                                    sequences=sequences, no_cross_predictions=args.no_cross_predictions)
+                                    sequences=sequences, no_cross_predictions=no_cross_predictions)
     for i in range(-1, work_dict['num_folds']):
         print(f'Fold {i} has {len(indexes_dict[i])} sequences to predict on.')
     tokenizer = load_tokenizer(model_name=work_dict['model_name'])
@@ -114,8 +120,8 @@ if __name__ == '__main__':
         fold_non_specific_predictions = []
         for index in range(work_dict['num_submodels']):
             try:
-                if args.use_custom_model:
-                    model_path = os.path.join(base_paths_list[index], f'fold_{fold}', 'model')     
+                if use_custom_model:
+                    model_path = os.path.join(base_paths_list[index], f'fold_{fold}', 'model')
                 else:
                     model_path = os.path.join(work_dict['model_folder_path'] ,f'submodel_{index}',f'fold_{fold}','model')
 
@@ -125,15 +131,15 @@ if __name__ == '__main__':
                 if len(specific_fold_sequences) > 0:
                     fold_specific_predictions.append(predict_binary_probs_from_sequences(model=model,device=device,
                                                                             sequences=specific_fold_sequences,
-                                                                            tokenizer=tokenizer,batch_size=args.batch_size,
+                                                                            tokenizer=tokenizer,batch_size=batch_size,
                                                                             use_tqdm=False))
-                else: 
+                else:
                     fold_specific_predictions.append(np.zeros((len(specific_fold_sequences), 1)))
-                
+
                 if len(non_specific_sequences) > 0:
                     fold_non_specific_predictions.append(predict_binary_probs_from_sequences(model=model,device=device,
                                                                                 sequences=non_specific_sequences,
-                                                                                tokenizer=tokenizer,batch_size=args.batch_size,
+                                                                                tokenizer=tokenizer,batch_size=batch_size,
                                                                                 use_tqdm=False))
                 else:
                     fold_non_specific_predictions.append(np.zeros((len(non_specific_sequences), 1)))
@@ -157,11 +163,31 @@ if __name__ == '__main__':
         'label': keys,
         'prediction': ordered_predictions,
         'model_uncertainty': ordered_std
-        
+
     })
-    output_dir = os.path.dirname(args.output_csv)
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = os.path.dirname(output_csv)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     # i want 4 digits after the decimal point in the predictions and std
-    predictions_df.to_csv(args.output_csv, index=False, float_format='%.4f')
-    print(f'Predictions saved to {args.output_csv}')
+    predictions_df.to_csv(output_csv, index=False, float_format='%.4f')
+    print(f'Predictions saved to {output_csv}')
+    return predictions_df
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Predict using LoRA LA ensemble model.')
+    parser.add_argument('--sequences_fasta', required=True, help='Path to the input sequences in FASTA format.')
+    parser.add_argument('--output_csv', required=True, help='Path to save the output predictions CSV file.')
+    parser.add_argument('--use_custom_model', action='store_true', help='Flag to indicate if a custom model should be used.')
+    parser.add_argument('--no_cross_predictions', action='store_true', help='Flag to indicate if cross-predictions should be disabled.')
+    parser.add_argument('--batch_size', type=int, default=64, help='Batch size for prediction.')
+    parser.add_argument('--num_submodels_max', type=int, default=50, help='Maximum number of submodels to use (set e.g. to 10 to speed-up inference)')
+    args = parser.parse_args()
+
+    predict(sequences_fasta=args.sequences_fasta,
+            output_csv=args.output_csv,
+            use_custom_model=args.use_custom_model,
+            no_cross_predictions=args.no_cross_predictions,
+            batch_size=args.batch_size,
+            num_submodels_max=args.num_submodels_max)
 
