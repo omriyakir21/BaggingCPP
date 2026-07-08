@@ -2,7 +2,7 @@ import os
 import tempfile
 from typing import Dict, Union
 from tubiana_lab_utils.data import inputs, outputs
-from inference.inference_api import predict as run_ensemble_prediction
+from inference_api.inference import predict as run_ensemble_prediction
 
 
 def predict(input_data: Union[inputs.FastaFile, inputs.FastaData]) -> Dict[str, outputs.scheme.Output]:
