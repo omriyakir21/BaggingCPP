@@ -64,16 +64,15 @@ def get_device() -> torch.device:
         return torch.device("cpu")
 
 
-def predict(sequences_fasta: str,
-            output_csv: str,
-            use_custom_model: bool = False,
-            no_cross_predictions: bool = False,
-            batch_size: int = 64,
-            num_submodels_max: int = 50,
-            device: torch.device = None) -> pd.DataFrame:
+def predict_helper(sequences_fasta: str,
+                   use_custom_model: bool = False,
+                   no_cross_predictions: bool = False,
+                   batch_size: int = 64,
+                   num_submodels_max: int = 50,
+                   device: torch.device = None) -> pd.DataFrame:
     """
-    Run the LoRA LA ensemble prediction on the sequences in `sequences_fasta`,
-    save the results to `output_csv` and return the predictions DataFrame.
+    Run the LoRA LA ensemble prediction on the sequences in `sequences_fasta`
+    and return the predictions DataFrame.
     """
     work_dict = {'hypothesis':'ensemble_inductive_pu_learning',
                          'experiment': 'groups_inductive',
@@ -157,7 +156,7 @@ def predict(sequences_fasta: str,
     non_specific_predictions = np.mean(non_specific_predictions, axis=0)
     ordered_predictions[indexes_dict[-1]] = non_specific_predictions.reshape(-1)
     ordered_std[indexes_dict[-1]] = np.std(non_specific_predictions, axis=0).reshape(-1)
-    print('Finished predictions, saving to CSV...')
+    print('Finished predictions.')
     predictions_df = pd.DataFrame({
         'sequence': sequences,
         'label': keys,
@@ -165,6 +164,26 @@ def predict(sequences_fasta: str,
         'model_uncertainty': ordered_std
 
     })
+    return predictions_df
+
+
+def predict(sequences_fasta: str,
+            output_csv: str,
+            use_custom_model: bool = False,
+            no_cross_predictions: bool = False,
+            batch_size: int = 64,
+            num_submodels_max: int = 50,
+            device: torch.device = None) -> pd.DataFrame:
+    """
+    Run the LoRA LA ensemble prediction on the sequences in `sequences_fasta`,
+    save the results to `output_csv` and return the predictions DataFrame.
+    """
+    predictions_df = predict_helper(sequences_fasta=sequences_fasta,
+                                    use_custom_model=use_custom_model,
+                                    no_cross_predictions=no_cross_predictions,
+                                    batch_size=batch_size,
+                                    num_submodels_max=num_submodels_max,
+                                    device=device)
     output_dir = os.path.dirname(output_csv)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
