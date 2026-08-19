@@ -120,7 +120,11 @@ def load_esm2_with_LA_lora_model(model_path: str,
     # 1. If it's a PeftModel, strip the old adapter entirely
     if isinstance(model, PeftModel):
         # unload() removes the PEFT wrapper and returns the base PyTorch model
-        model = model.unload() 
+        model = model.unload()
+        # unload() leaves the `peft_config` that BaseTuner stamped onto the base model.
+        # The next from_pretrained() finds it and logs a spurious "multiple adapters" warning.
+        if hasattr(model, "peft_config"):
+            del model.peft_config
 
     # 2. If no model was provided at all, build from scratch
     elif model is None:
