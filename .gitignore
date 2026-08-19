@@ -17,3 +17,5 @@ scripts/bash/
 test_downloaded_repo/
 datasets/full_datasets/bagging_cpp_dataset_before.csv
 inference/predictions_huggingface_model_no_cross_predictions.csv
+inference/predictions_github_model_no_cross_predictions.csv
+inference/predictions_github_model.csv
