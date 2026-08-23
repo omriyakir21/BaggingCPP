@@ -19,7 +19,7 @@ To activate the environment, run: <br> <code>activate BaggingCPP </code>
 # Model Inference
 
 Run inference:<br>
-<code>python -m inference.inference \
+<code>python -m inference_api.inference \
     --sequences_fasta example/example.fasta  \
     --output_csv example/example_output.csv
 </code>
@@ -28,7 +28,7 @@ Note that, by construction, if a test sequence appears in the unlabeled training
 
 <br>
 If you want to average the results of the 5 ensembles (no cross predictions) for all sequences, use:
-<code>python -m inference.inference \
+<code>python -m inference_api.inference \
     --sequences_fasta example/example.fasta  \
     --output_csv example/example_output.csv \
     --no_cross_predictions</code>
@@ -87,15 +87,15 @@ For AUC-ROC calculation(only valid for the inductive setting),run the notebook:<
 
 ## Run inference over the inductive pu learning trained ensemble:
 In order to run inference using the trained model do: <br>
-<code>python -m inference.inference \
+<code>python -m inference_api.inference \
     --sequences_fasta example/example.fasta \
-    --output_csv inference/predictions.csv \
+    --output_csv inference_api/predictions.csv \
     --use_custom_model
 </code>
 If you want to average the results of the 5 ensembles (no cross predictions) use:
-<code>python -m inference.inference \
+<code>python -m inference_api.inference \
     --sequences_fasta example/example.fasta \
-    --output_csv inference/predictions.csv \
+    --output_csv inference_api/predictions.csv \
     --use_custom_model \
     --no_cross_predictions
 </code>

@@ -39,9 +39,12 @@ def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list, no_cross_pr
         fold_to_indices[-1] = list(range(len(sequences)))
         return fold_to_indices
         
-    df = pd.read_csv(bagging_cpp_dataset_path)
-    if 'test_fold_index' not in df.columns:
-        raise ValueError("The input CSV must contain a 'test_fold_index' column.")
+    # Only these two columns are used. Reading just them avoids the DtypeWarning raised by the
+    # free-text 'description' column and keeps the 450k-row load cheap.
+    try:
+        df = pd.read_csv(bagging_cpp_dataset_path, usecols=['sequence', 'test_fold_index'])
+    except ValueError as e:
+        raise ValueError("The input CSV must contain 'sequence' and 'test_fold_index' columns.") from e
     
     sequences_to_test_folds = dict( zip( df['sequence'], df['test_fold_index']  ) )
 
@@ -151,11 +154,14 @@ def predict_helper(sequences_fasta: str,
         ordered_std[fold_indices] = fold_specific_std
         fold_specific_predictions = np.mean(fold_specific_predictions, axis=0).reshape(-1)
         ordered_predictions[fold_indices] = fold_specific_predictions
-        fold_non_specific_predictions = np.mean(fold_non_specific_predictions, axis=0)
-        non_specific_predictions.append(fold_non_specific_predictions)
-    non_specific_predictions = np.mean(non_specific_predictions, axis=0)
-    ordered_predictions[indexes_dict[-1]] = non_specific_predictions.reshape(-1)
-    ordered_std[indexes_dict[-1]] = np.std(non_specific_predictions, axis=0).reshape(-1)
+        # Keep every submodel's prediction rather than averaging per fold, so the spread below is
+        # measured across ensemble members - the same quantity fold_specific_std reports.
+        non_specific_predictions.extend(fold_non_specific_predictions)
+    if len(indexes_dict[-1]) > 0:
+        # (num_folds * num_submodels, num_sequences, 1)
+        non_specific_stack = np.stack(non_specific_predictions, axis=0)
+        ordered_predictions[indexes_dict[-1]] = np.mean(non_specific_stack, axis=0).reshape(-1)
+        ordered_std[indexes_dict[-1]] = np.std(non_specific_stack, axis=0).reshape(-1)
     print('Finished predictions.')
     predictions_df = pd.DataFrame({
         'sequence': sequences,
