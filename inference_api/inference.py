@@ -1,12 +1,12 @@
-import os
-import torch
-from models.inference_LM import load_esm2_with_LA_lora_model,load_tokenizer,predict_binary_probs_from_sequences
-from evaluation.utils_evaluation import get_experiment_base_paths_for_ensemble
 import argparse
-from typing import List, Tuple
-import numpy as np
+import os
+from typing import List, Optional, Tuple
+
 import pandas as pd
-from tqdm import tqdm
+import torch
+
+from inference_api.ensemble import DEFAULT_WORK_DICT, LoRAEnsemble, get_device
+
 
 def read_fasta(fasta_path:str)->Tuple[List[str],List[str]]:
     """
@@ -27,25 +27,26 @@ def read_fasta(fasta_path:str)->Tuple[List[str],List[str]]:
                 # This is a sequence line
                 sequences.append(line)
     return sequences, keys
-    
+
+
 def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list, no_cross_predictions: bool = False) -> dict:
     """
     Reads the bagging_cpp_dataset.csv file and creates a dictionary mapping fold indices to lists of sequence indices.
     """
     # Initialized with integer keys to prevent KeyError later in the script
-    fold_to_indices = {0: [], 1: [], 2: [], 3: [], 4: [], -1: []}    
+    fold_to_indices = {0: [], 1: [], 2: [], 3: [], 4: [], -1: []}
     if no_cross_predictions:
         # If no_cross_predictions is True, we will only use the -1 fold for all sequences
         fold_to_indices[-1] = list(range(len(sequences)))
         return fold_to_indices
-        
+
     # Only these two columns are used. Reading just them avoids the DtypeWarning raised by the
     # free-text 'description' column and keeps the 450k-row load cheap.
     try:
         df = pd.read_csv(bagging_cpp_dataset_path, usecols=['sequence', 'test_fold_index'])
     except ValueError as e:
         raise ValueError("The input CSV must contain 'sequence' and 'test_fold_index' columns.") from e
-    
+
     sequences_to_test_folds = dict( zip( df['sequence'], df['test_fold_index']  ) )
 
     # Using enumerate avoids the O(N^2) complexity of sequences.index(sequence)
@@ -55,16 +56,24 @@ def get_indexes_dict(bagging_cpp_dataset_path: str, sequences: list, no_cross_pr
             fold_to_indices[fold_index].append(idx)
         else:
             fold_to_indices[-1].append(idx)
-            
+
     return fold_to_indices
 
-def get_device() -> torch.device:
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    elif torch.backends.mps.is_available():
-        return torch.device("mps")
-    else:
-        return torch.device("cpu")
+
+def load_ensemble(use_custom_model: bool = False,
+                  num_submodels_max: int = 50,
+                  device: torch.device = None,
+                  work_dict: Optional[dict] = None,
+                  verbose: bool = True) -> LoRAEnsemble:
+    """
+    Build the ensemble once so it can be reused across many prediction calls
+    (a design loop should hold on to this object instead of calling `predict`).
+    """
+    return LoRAEnsemble(work_dict=work_dict,
+                        device=device,
+                        num_submodels_max=num_submodels_max,
+                        use_custom_model=use_custom_model,
+                        verbose=verbose)
 
 
 def predict_helper(sequences_fasta: str,
@@ -72,105 +81,23 @@ def predict_helper(sequences_fasta: str,
                    no_cross_predictions: bool = False,
                    batch_size: int = 64,
                    num_submodels_max: int = 50,
-                   device: torch.device = None) -> pd.DataFrame:
+                   device: torch.device = None,
+                   ensemble: Optional[LoRAEnsemble] = None) -> pd.DataFrame:
     """
     Run the LoRA LA ensemble prediction on the sequences in `sequences_fasta`
     and return the predictions DataFrame.
+
+    Pass an already built `ensemble` to skip loading the adapters from disk.
     """
-    work_dict = {'hypothesis':'ensemble_inductive_pu_learning',
-                         'experiment': 'groups_inductive',
-                         'model_name': 'facebook/esm2_t6_8M_UR50D',
-                         'num_submodels': min(50 , num_submodels_max),
-                         'num_folds': 5,
-                         'model_folder_path': 'results_upload/model_folder/ensemble',
-                         'bagging_cpp_dataset_path': 'datasets/full_datasets/bagging_cpp_dataset.csv',
-                         'num_labels': 1,
-                         'dout': 128,
-                         'kernel_size': 7,
-                         'use_max': True
-}
-
-    if device is None:
-        device = get_device()
-
-    print(f"Using device: {device}")
-
     sequences, keys = read_fasta(sequences_fasta)
-
-    if use_custom_model:
-        base_paths, submodels_to_run = get_experiment_base_paths_for_ensemble(experiment=work_dict['experiment'],
-                                                        base_paths={},
-                                                        hypothesis_path=os.path.join('results', 'hypothesis', work_dict['hypothesis']),
-                                                        num_submodels=work_dict['num_submodels'])
-        base_paths_list = list(base_paths[work_dict['experiment']])
-
-
-    indexes_dict = get_indexes_dict(bagging_cpp_dataset_path=work_dict['bagging_cpp_dataset_path'],\
-                                    sequences=sequences, no_cross_predictions=no_cross_predictions)
-    for i in range(-1, work_dict['num_folds']):
-        print(f'Fold {i} has {len(indexes_dict[i])} sequences to predict on.')
-    tokenizer = load_tokenizer(model_name=work_dict['model_name'])
-    ordered_predictions = np.empty(len(sequences), dtype=float)
-    ordered_std = np.empty(len(sequences), dtype=float)
-    non_specific_predictions = []
-    non_specific_sequences = [sequences[i] for i in indexes_dict[-1]]
-    model = None
-    for fold in tqdm(range(work_dict['num_folds']), desc=f"Predicting using ensemble"):
-        fold_indices = indexes_dict[fold]
-        specific_fold_sequences = [sequences[i] for i in indexes_dict[fold]]
-        fold_specific_predictions = []
-        fold_non_specific_predictions = []
-        for index in range(work_dict['num_submodels']):
-            try:
-                if use_custom_model:
-                    model_path = os.path.join(base_paths_list[index], f'fold_{fold}', 'model')
-                else:
-                    model_path = os.path.join(work_dict['model_folder_path'] ,f'submodel_{index}',f'fold_{fold}','model')
-
-                model = load_esm2_with_LA_lora_model(model_path=model_path,device=device,model_name=work_dict['model_name'],
-                                                    num_labels=work_dict['num_labels'],dout=work_dict['dout'],kernel_size=work_dict['kernel_size'],
-                                                    use_max=work_dict['use_max'],model=model)
-                if len(specific_fold_sequences) > 0:
-                    fold_specific_predictions.append(predict_binary_probs_from_sequences(model=model,device=device,
-                                                                            sequences=specific_fold_sequences,
-                                                                            tokenizer=tokenizer,batch_size=batch_size,
-                                                                            use_tqdm=False))
-                else:
-                    fold_specific_predictions.append(np.zeros((len(specific_fold_sequences), 1)))
-
-                if len(non_specific_sequences) > 0:
-                    fold_non_specific_predictions.append(predict_binary_probs_from_sequences(model=model,device=device,
-                                                                                sequences=non_specific_sequences,
-                                                                                tokenizer=tokenizer,batch_size=batch_size,
-                                                                                use_tqdm=False))
-                else:
-                    fold_non_specific_predictions.append(np.zeros((len(non_specific_sequences), 1)))
-
-            except Exception as e:
-                print(e)
-                print(f'Error loading fold {fold} for submodel {index}')
-                continue
-        fold_specific_std = np.std(fold_specific_predictions, axis=0).reshape(-1)
-        ordered_std[fold_indices] = fold_specific_std
-        fold_specific_predictions = np.mean(fold_specific_predictions, axis=0).reshape(-1)
-        ordered_predictions[fold_indices] = fold_specific_predictions
-        # Keep every submodel's prediction rather than averaging per fold, so the spread below is
-        # measured across ensemble members - the same quantity fold_specific_std reports.
-        non_specific_predictions.extend(fold_non_specific_predictions)
-    if len(indexes_dict[-1]) > 0:
-        # (num_folds * num_submodels, num_sequences, 1)
-        non_specific_stack = np.stack(non_specific_predictions, axis=0)
-        ordered_predictions[indexes_dict[-1]] = np.mean(non_specific_stack, axis=0).reshape(-1)
-        ordered_std[indexes_dict[-1]] = np.std(non_specific_stack, axis=0).reshape(-1)
-    print('Finished predictions.')
-    predictions_df = pd.DataFrame({
-        'sequence': sequences,
-        'label': keys,
-        'prediction': ordered_predictions,
-        'model_uncertainty': ordered_std
-
-    })
-    return predictions_df
+    if ensemble is None:
+        ensemble = load_ensemble(use_custom_model=use_custom_model,
+                                 num_submodels_max=num_submodels_max,
+                                 device=device)
+    return ensemble.predict(sequences=sequences,
+                            keys=keys,
+                            no_cross_predictions=no_cross_predictions,
+                            batch_size=batch_size)
 
 
 def predict(sequences_fasta: str,
@@ -179,7 +106,8 @@ def predict(sequences_fasta: str,
             no_cross_predictions: bool = False,
             batch_size: int = 64,
             num_submodels_max: int = 50,
-            device: torch.device = None) -> pd.DataFrame:
+            device: torch.device = None,
+            ensemble: Optional[LoRAEnsemble] = None) -> pd.DataFrame:
     """
     Run the LoRA LA ensemble prediction on the sequences in `sequences_fasta`,
     save the results to `output_csv` and return the predictions DataFrame.
@@ -189,7 +117,8 @@ def predict(sequences_fasta: str,
                                     no_cross_predictions=no_cross_predictions,
                                     batch_size=batch_size,
                                     num_submodels_max=num_submodels_max,
-                                    device=device)
+                                    device=device,
+                                    ensemble=ensemble)
     output_dir = os.path.dirname(output_csv)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
@@ -215,4 +144,3 @@ if __name__ == '__main__':
             no_cross_predictions=args.no_cross_predictions,
             batch_size=args.batch_size,
             num_submodels_max=args.num_submodels_max)
-
