@@ -1,13 +1,10 @@
 import os
-import uuid
-from datetime import datetime
-from zoneinfo import ZoneInfo
 from typing import Dict, Union
 from tubiana_lab_utils.data import inputs, outputs
 from inference_api.inference import predict as run_ensemble_prediction
 
 
-def predict(input_data: Union[inputs.FastaFile, inputs.FastaData]) -> Dict[str, outputs.scheme.Output]:
+def predict(input_data: Union[inputs.FastaFile, inputs.FastaData], output_dir: str) -> Dict[str, outputs.scheme.Output]:
     if isinstance(input_data, inputs.FastaFile):
         fasta_content = input_data.fasta_file
     elif isinstance(input_data, inputs.FastaData):
@@ -15,14 +12,9 @@ def predict(input_data: Union[inputs.FastaFile, inputs.FastaData]) -> Dict[str, 
     else:
         raise TypeError(f"Unsupported input type: {type(input_data).__name__}")
 
-    work_dir = "/home/iscb/wolfson/lab_tools/data/bagging_cpp"
-    now = datetime.now(ZoneInfo("Asia/Jerusalem"))
-    day_folder = now.strftime("%Y-%m-%d")
-    time_random_folder = now.strftime("%H-%M-%S") + "_" + uuid.uuid4().hex[:8]
-    request_dir = os.path.join(work_dir, day_folder, time_random_folder)
-    os.makedirs(request_dir, exist_ok=True)
-    fasta_path = os.path.join(request_dir, "input_sequences.fasta")
-    output_csv = os.path.join(request_dir, "predictions.csv")
+    os.makedirs(output_dir, exist_ok=True)
+    fasta_path = os.path.join(output_dir, "input_sequences.fasta")
+    output_csv = os.path.join(output_dir, "predictions.csv")
     with open(fasta_path, "w") as f:
         f.write(fasta_content)
 
