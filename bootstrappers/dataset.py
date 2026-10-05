@@ -26,6 +26,12 @@ def create_cross_validation_dataset_for_folds(fold_training_dict: list,submodel_
     positive_indexes_fold = np.where(labels_fold == np.int64(1))[0]
     group_for_train_all_submodels = utils.load_as_pickle(os.path.join(groups_path,f'fold_{fold_index}','groups_for_ensemble.pkl'))
     group_for_train = group_for_train_all_submodels[submodel_index]
+    unlabeled_indexes_fold = np.where(labels_fold == np.int64(0))[0]
+    if not np.all(np.isin(group_for_train, unlabeled_indexes_fold)):
+        raise ValueError(
+            f'Found sampled negatives that are not unlabeled training sequences in fold {fold_index}. '
+            f'Check groups_path={groups_path}; regenerate it with data_preparation.ensemble_dataset_creator.'
+        )
     group_indices_fold = np.concatenate([positive_indexes_fold, group_for_train])
     sequences_fold = np.array(fold_training_dict['sequences_train'])[group_indices_fold].tolist()
     train_ids_fold = np.array(fold_training_dict['ids_train'])[group_indices_fold].tolist()

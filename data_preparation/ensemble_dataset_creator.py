@@ -66,12 +66,12 @@ if __name__ =="__main__":
     sequences_folds = [fold['sequences_train'] for fold in folds_training_dicts]
     unlabeled_indexes = [np.where(label_fold == np.int64(0))[0] for label_fold in label_folds]
 
-    clusters_participants_list_folds = None
-    transductive_unlabeled_global_indices_folds = None
+    # Only unlabeled sequences may be sampled as negatives, so only they are clustered.
+    # Cluster members are positions in this unlabeled pool, mapped back to dataset indices below.
+    unlabeled_pool_indices_folds = []
+    clusters_participants_list_folds = []
     if alogrithm_name == 'transductive_pu_learning':
         print('clustering merged 4-fold unlabeled pools for transductive_pu_learning')
-        transductive_unlabeled_global_indices_folds = []
-        clusters_participants_list_folds = []
         for i in range(num_folds):
             merged_sequences = np.array(
                 folds_training_dicts[i]['sequences_train'] + folds_training_dicts[i]['sequences_test']
@@ -80,7 +80,7 @@ if __name__ =="__main__":
                 folds_training_dicts[i]['labels_train'] + folds_training_dicts[i]['labels_test']
             )
             unlabeled_global_indices = np.where(merged_labels == np.int64(0))[0]
-            transductive_unlabeled_global_indices_folds.append(unlabeled_global_indices)
+            unlabeled_pool_indices_folds.append(unlabeled_global_indices)
 
             unlabeled_sequences = merged_sequences[unlabeled_global_indices].tolist()
             clustered_indices, _ = cluster_sequences(unlabeled_sequences, seqid=0.5, coverage=0.4)
@@ -88,9 +88,15 @@ if __name__ =="__main__":
                 create_cluster_participants_indices(clustered_indices)
             )
     else:
-        print('clustering sequences for version v2')
-        clustered_indices_folds = [cluster_sequences(sequences_folds[i], seqid=0.5, coverage=0.4)[0] for i in range(num_folds)]
-        clusters_participants_list_folds = [create_cluster_participants_indices(clustered_indices_folds[i]) for i in range(num_folds)]
+        print('clustering the unlabeled training sequences of each fold')
+        for i in range(num_folds):
+            unlabeled_pool_indices_folds.append(unlabeled_indexes[i])
+
+            unlabeled_sequences = np.array(sequences_folds[i])[unlabeled_indexes[i]].tolist()
+            clustered_indices, _ = cluster_sequences(unlabeled_sequences, seqid=0.5, coverage=0.4)
+            clusters_participants_list_folds.append(
+                create_cluster_participants_indices(clustered_indices)
+            )
 
     for iteration, negative_size in itertools.product(iteration_grid,negative_size_grid):
         groups_dir = os.path.join(output_dir,f'iteration_{iteration}_negative_size_{negative_size}')
@@ -102,12 +108,11 @@ if __name__ =="__main__":
                                                 iterations_number=iteration,
                                                 )
 
-            if alogrithm_name == 'transductive_pu_learning':
-                unlabeled_global_indices = transductive_unlabeled_global_indices_folds[i]
-                groups_for_train = [
-                    unlabeled_global_indices[np.array(group_indices, dtype=np.int64)]
-                    for group_indices in groups_for_train
-                ]
+            unlabeled_pool_indices = unlabeled_pool_indices_folds[i]
+            groups_for_train = [
+                unlabeled_pool_indices[np.array(group_indices, dtype=np.int64)]
+                for group_indices in groups_for_train
+            ]
             fold_dir = os.path.join(groups_dir, f'fold_{i}')
             os.makedirs(fold_dir, exist_ok=True)
             utils.save_as_pickle(groups_for_train, os.path.join(fold_dir, 'groups_for_ensemble.pkl'))
