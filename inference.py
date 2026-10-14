@@ -15,6 +15,12 @@ def _get_ensemble():
     return _ENSEMBLE
 
 
+def load() -> None:
+    """Optional hook: the web server calls it when a worker process starts, so the ensemble is loaded before
+    the first request instead of during it."""
+    _get_ensemble()
+
+
 def predict(input_data: Union[inputs.FastaFile, inputs.FastaData], output_dir: str) -> Dict[str, outputs.scheme.Output]:
     if isinstance(input_data, inputs.FastaFile):
         fasta_content = input_data.fasta_file
