@@ -24,8 +24,9 @@ RQIKIWFQNRRMKWKK
 
 ## Results
 
-- **Results table**: the 50 highest-scoring sequences, best first.
-- **Download Results**: a CSV with every sequence you submitted:
+The **Results** table lists every sequence you submitted, highest score first, with the score shown as a bar. Hover
+over the table for its toolbar: **download it as CSV**, search, show it full screen, or hide columns. Click a column
+header to sort by it.
 
 | Column | Meaning |
 |---|---|
@@ -40,10 +41,12 @@ other sequence is scored by all 5 ensembles (250 models), and the scores are ave
 
 ## Good to know
 
-- A job usually takes a few minutes; it can take longer when other jobs are queued. Keep the page open until
-  the results appear.
-- The download link is valid for 24 hours. Results are kept on the server for a limited time only, so save the
-  CSV.
+- A job usually takes a few minutes; it can take longer when other jobs are queued.
+- After you submit, the page address changes to a link to your job (`…/BaggingCPP/?job=…`). Keep it to come
+  back to the results later.
+- Optionally, enter your e-mail address before submitting: when the job ends, you get an e-mail with the link to
+  your results and the CSV attached.
+- Results are kept on the server for a limited time only, so save the CSV.
 - If the server is busy, you will be asked to try again a few minutes later.
 
 ## Citation

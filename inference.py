@@ -1,5 +1,8 @@
+import json
 import os
 from typing import Dict, Union
+
+import pandas as pd
 from tubiana_lab_utils.data import inputs, outputs
 from inference_api.inference import load_ensemble, predict as run_ensemble_prediction
 
@@ -21,6 +24,19 @@ def load() -> None:
     _get_ensemble()
 
 
+def _one_line_per_sequence(fasta_content: str) -> str:
+    """Join sequences wrapped over several lines (valid FASTA, accepted by the input validation): `read_fasta`
+    takes every non-header line as a sequence of its own. Blank lines are dropped."""
+    records = []
+    for line in fasta_content.splitlines():
+        line = line.strip()
+        if line.startswith(">"):
+            records.append([line, ""])
+        elif line and records:
+            records[-1][1] += line
+    return "".join(f"{header}\n{sequence}\n" for header, sequence in records)
+
+
 def predict(input_data: Union[inputs.FastaFile, inputs.FastaData], output_dir: str) -> Dict[str, outputs.scheme.Output]:
     if isinstance(input_data, inputs.FastaFile):
         fasta_content = input_data.fasta_file
@@ -33,16 +49,15 @@ def predict(input_data: Union[inputs.FastaFile, inputs.FastaData], output_dir: s
     fasta_path = os.path.join(output_dir, "input_sequences.fasta")
     output_csv = os.path.join(output_dir, "predictions.csv")
     with open(fasta_path, "w") as f:
-        f.write(fasta_content)
+        f.write(_one_line_per_sequence(fasta_content))
 
-    predictions_df = run_ensemble_prediction(sequences_fasta=fasta_path, output_csv=output_csv,
-                                             ensemble=_get_ensemble())
+    run_ensemble_prediction(sequences_fasta=fasta_path, output_csv=output_csv, ensemble=_get_ensemble())
 
-    # Keep the top (up to) 50 predictions, highest scoring first.
-    top_df = predictions_df.sort_values("prediction", ascending=False).head(50)
-    top_scores = {str(label): float(score) for label, score in zip(top_df["label"], top_df["prediction"])}
+    # The table shows the CSV itself: every row and every column, under the same names (the table view sorts it
+    # by `prediction`). json round trip: plain Python values, NaN as null.
+    table = json.loads(pd.read_csv(output_csv).to_json(orient="split", index=False))
 
     return {
-        "global_scores": outputs.GlobalScores(scores=top_scores),
+        "table": outputs.Table(columns=table["columns"], rows=table["data"]),
         "file_reference": outputs.FileReference(path=output_csv),
     }

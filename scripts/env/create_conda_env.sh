@@ -26,5 +26,4 @@ echo "Installing required packages from requirements.txt..."
 pip install -r scripts/env/requirements_lean.txt
 set -u
 
-mkdir tmp
-mkdir tmp/mmseqs
+mkdir -p tmp/mmseqs
