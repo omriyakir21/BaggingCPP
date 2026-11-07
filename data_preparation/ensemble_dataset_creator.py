@@ -50,15 +50,23 @@ if __name__ =="__main__":
     parser.add_argument("--iteration_grid", nargs='+', type=int, default=[50])
     parser.add_argument("--negative_size_grid", nargs='+', type=float, default=[0.3])
     parser.add_argument("--folds_training_dicts_path", default='datasets/data_for_training/folds_training_dicts.pkl')
+    parser.add_argument("--sampling_unit", choices=['cluster', 'sequence'], default='cluster',
+                        help="What a single draw takes. 'cluster' is the method the paper "
+                             "describes: draw whole sequence-identity clusters. 'sequence' is "
+                             "the original BaggingSVM behaviour, drawing individual sequences; "
+                             "it is kept so the two can be compared on the same partition.")
     args = parser.parse_args()
-    
+
     num_folds = args.num_folds
     alogrithm_name = args.algorithm_name
     iteration_grid = args.iteration_grid
     negative_size_grid = args.negative_size_grid
     folds_training_dicts_path = args.folds_training_dicts_path
+    sampling_unit = args.sampling_unit
     folds_training_dicts = utils.load_as_pickle(folds_training_dicts_path)
-    output_dir = os.path.join('datasets','data_for_training','ensembles',alogrithm_name)
+    # Sequence-sampled groups live beside the cluster-sampled ones, never on top of them.
+    output_name = alogrithm_name if sampling_unit == 'cluster' else f'{alogrithm_name}_sequence_sampling'
+    output_dir = os.path.join('datasets','data_for_training','ensembles',output_name)
     os.makedirs(output_dir, exist_ok=True)
     
 
@@ -87,6 +95,11 @@ if __name__ =="__main__":
             clusters_participants_list_folds.append(
                 create_cluster_participants_indices(clustered_indices)
             )
+    elif sampling_unit == 'sequence':
+        # No clustering needed: the draws are individual sequences, so MMseqs2
+        # would only be run to have its result thrown away.
+        for i in range(num_folds):
+            unlabeled_pool_indices_folds.append(unlabeled_indexes[i])
     else:
         print('clustering the unlabeled training sequences of each fold')
         for i in range(num_folds):
@@ -97,6 +110,17 @@ if __name__ =="__main__":
             clusters_participants_list_folds.append(
                 create_cluster_participants_indices(clustered_indices)
             )
+
+    if sampling_unit == 'sequence':
+        # Each unlabeled sequence becomes its own group of one, so a draw takes a
+        # single sequence rather than a whole cluster. Feeding singletons through
+        # the same create_groups keeps the draw count identical: we still take
+        # int(fraction * pool size) draws with replacement. The clustering above
+        # is discarded, which is also why this mode does not need MMseqs2.
+        print('sampling unit is "sequence": replacing clusters by singletons')
+        clusters_participants_list_folds = [
+            [[j] for j in range(len(pool))] for pool in unlabeled_pool_indices_folds
+        ]
 
     for iteration, negative_size in itertools.product(iteration_grid,negative_size_grid):
         groups_dir = os.path.join(output_dir,f'iteration_{iteration}_negative_size_{negative_size}')
