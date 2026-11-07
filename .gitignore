@@ -19,3 +19,5 @@ datasets/full_datasets/bagging_cpp_dataset_before.csv
 inference_api/predictions_huggingface_model_no_cross_predictions.csv
 inference_api/predictions_github_model_no_cross_predictions.csv
 inference_api/predictions_github_model.csv
+assets/*
+knowledge/*
