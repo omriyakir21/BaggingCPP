@@ -21,3 +21,5 @@ inference_api/predictions_github_model_no_cross_predictions.csv
 inference_api/predictions_github_model.csv
 assets/*
 knowledge/*
+results_upload/model_folder_previous/*
+

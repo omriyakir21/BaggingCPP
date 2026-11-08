@@ -18,20 +18,25 @@ To activate the environment, run: <br> <code>activate BaggingCPP </code>
 
 # Model Inference
 
-Run inference:<br>
-<code>python -m inference_api.inference \
-    --sequences_fasta example/example.fasta  \
+Run inference:
+
+```bash
+python -m inference_api.inference \
+    --sequences_fasta example/example.fasta \
     --output_csv example/example_output.csv
-</code>
+```
 
 Note that, by construction, if a test sequence appears in the unlabeled training set, it was used as a **negative** for some of the models, leading to underestimation of its CPP probability. To correct for this bias, by default, the script checks, for each sequence, whether it appears in the training set and, if yes, in which fold. It then only uses one of the model ensembles that was not trained on this sequence to make prediction. For sequences that are not part of the training set, it averages the results of the 5 ensembles (250 models in total).
 
 <br>
 If you want to average the results of the 5 ensembles (no cross predictions) for all sequences, use:
-<code>python -m inference_api.inference \
-    --sequences_fasta example/example.fasta  \
+
+```bash
+python -m inference_api.inference \
+    --sequences_fasta example/example.fasta \
     --output_csv example/example_output.csv \
-    --no_cross_predictions</code>
+    --no_cross_predictions
+```
 
 # Data Preparation and Training From Scratch
 
@@ -86,19 +91,24 @@ For AUC-ROC calculation(only valid for the inductive setting),run the notebook:<
  <code> evaluation/evaluation_ensemble.ipynb</code>:
 
 ## Run inference over the inductive pu learning trained ensemble:
-In order to run inference using the trained model do: <br>
-<code>python -m inference_api.inference \
+In order to run inference using the trained model do:
+
+```bash
+python -m inference_api.inference \
     --sequences_fasta example/example.fasta \
     --output_csv inference_api/predictions.csv \
     --use_custom_model
-</code>
+```
+
 If you want to average the results of the 5 ensembles (no cross predictions) use:
-<code>python -m inference_api.inference \
+
+```bash
+python -m inference_api.inference \
     --sequences_fasta example/example.fasta \
     --output_csv inference_api/predictions.csv \
     --use_custom_model \
     --no_cross_predictions
-</code>
+```
 
 
 ## License
