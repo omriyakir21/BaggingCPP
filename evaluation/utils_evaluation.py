@@ -600,3 +600,47 @@ def gather_ensemble_experiments_base_paths(hypothesis, experiments, it=50, resul
     print(f'submodels_to_run: {submodels_to_run}')
     return base_paths, submodels_to_run
 
+
+
+def delong_structural_components(predictions, y_true):
+    """DeLong placement values for several models scored on the same samples.
+
+    predictions has shape (n_models, n_samples). Returns the AUC-ROC of each model and the
+    placement values V10 (n_models, n_positives) and V01 (n_models, n_negatives), from which
+    the covariance of any contrast between the AUCs follows (Sun and Xu, 2014).
+    """
+    from scipy import stats
+    predictions = np.atleast_2d(np.asarray(predictions, dtype=float))
+    positive = np.asarray(y_true).reshape(-1) == 1
+    n_positive, n_negative = int(positive.sum()), int((~positive).sum())
+    V10 = np.empty((len(predictions), n_positive))
+    V01 = np.empty((len(predictions), n_negative))
+    for k, y_score in enumerate(predictions):
+        positive_scores, negative_scores = y_score[positive], y_score[~positive]
+        rank_all = stats.rankdata(np.concatenate([positive_scores, negative_scores]))
+        V10[k] = (rank_all[:n_positive] - stats.rankdata(positive_scores)) / n_negative
+        V01[k] = 1.0 - (rank_all[n_positive:] - stats.rankdata(negative_scores)) / n_positive
+    return V10.mean(axis=1), V10, V01
+
+
+def delong_test(y_score_a, y_score_b, y_true):
+    """DeLong's test for the AUC-ROC difference of two models scored on the same samples.
+
+    Uses the placement-value form of Sun and Xu (2014). Returns the two AUCs, their difference,
+    its standard error, a two-sided p-value and a 95% confidence interval.
+    """
+    from scipy import stats
+    predictions = np.vstack([np.asarray(y_score_a, dtype=float).reshape(-1),
+                             np.asarray(y_score_b, dtype=float).reshape(-1)])
+    aucs, V10, V01 = delong_structural_components(predictions, y_true)
+    covariance = np.cov(V10) / V10.shape[1] + np.cov(V01) / V01.shape[1]
+    difference = aucs[0] - aucs[1]
+    standard_error = float(np.sqrt(max(covariance[0, 0] + covariance[1, 1] - 2 * covariance[0, 1], 0.0)))
+    z = difference / standard_error if standard_error > 0 else np.inf * np.sign(difference)
+    return {
+        'auc_a': aucs[0], 'auc_b': aucs[1], 'difference': difference,
+        'standard_error': standard_error, 'z': z,
+        'p_value': float(2 * stats.norm.sf(abs(z))) if standard_error > 0 else 0.0,
+        'ci_low': difference - 1.959963985 * standard_error,
+        'ci_high': difference + 1.959963985 * standard_error,
+    }

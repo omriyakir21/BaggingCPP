@@ -18,6 +18,24 @@ def bootstrap_esm2_with_classification_head(model_name: str,num_labels: int,lora
     model = EsmForSequenceClassification.from_pretrained(model_name, num_labels= num_labels)
     return make_lora(model = model,lora_kwargs=lora_kwargs,extra_kwargs=extra_kwargs)
 
+def bootstrap_esm2_with_classification_head_no_lora(model_name: str, num_labels: int, extra_kwargs: dict) -> EsmForSequenceClassification:
+    """ESM2 kept frozen, with only the MLP classification head trained.
+
+    This is the frozen + MLP row of the ablation table. It mirrors
+    bootstrap_esm2_with_LA_no_lora, but keeps the standard
+    EsmForSequenceClassification head instead of LightAttention.
+    """
+    model = EsmForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+
+    for name, param in model.named_parameters():
+        param.requires_grad = name.startswith('classifier')
+
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    print(f'trainable params: {trainable} || all params: {total} || '
+          f'trainable%: {100 * trainable / total:.4f}')
+    return model
+
 def bootstrap_esm2_with_LA(model_name: str,  num_labels: int , dout: int , kernel_size: int,use_max:bool,lora_kwargs:dict,extra_kwargs:dict) -> torch.nn.Module:
     esm2_config = AutoConfig.from_pretrained(model_name,trust_remote_code=True) 
     esm2_config.num_labels = num_labels
@@ -64,7 +82,8 @@ model_to_bootstrapper = {
     'esm2_with_classification_head': bootstrap_esm2_with_classification_head,
     'esm2_with_LA_head': bootstrap_esm2_with_LA  ,
     'convolution': bootstrap_with_convolution,
-    'esm2_LA_no_lora': bootstrap_esm2_with_LA_no_lora
+    'esm2_LA_no_lora': bootstrap_esm2_with_LA_no_lora,
+    'esm2_classification_head_no_lora': bootstrap_esm2_with_classification_head_no_lora
 }
 
 def get_target_modules(model: EsmForSequenceClassification,target_modules:list) -> list:

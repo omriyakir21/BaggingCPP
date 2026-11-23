@@ -17,9 +17,21 @@ def bootstrap_convolution_save_model(model:CNNModel,save_dir:str) -> None:
     torch.save(model.state_dict(), os.path.join(save_dir, f'model.pt'))
     print(f'model save path {save_dir}...')
 
-def bootstrap_LA_no_lora_save_model(model:Union[PeftModel,ESMWithLightAttentionHead],save_dir:str) -> None:  
+def bootstrap_LA_no_lora_save_model(model:Union[PeftModel,ESMWithLightAttentionHead],save_dir:str) -> None:
     model.save_LA_head(save_dir)
     print(f'model save path {save_dir}...')
+
+def bootstrap_classification_head_no_lora_save_model(model, save_dir: str) -> None:
+    """Save only the classifier head.
+
+    The ESM2 backbone is frozen, so storing it 250 times would waste disk for
+    no information. Mirrors save_LA_head.
+    """
+    os.makedirs(save_dir, exist_ok=True)
+    layers = {'classifier': model.classifier.state_dict()}
+    layers_file = os.path.join(save_dir, 'classification_head_layers.pth')
+    torch.save(layers, layers_file)
+    print(f'Selected layers saved to {layers_file}')
 
 
 save_model_to_bootstrapper = {
@@ -27,6 +39,7 @@ save_model_to_bootstrapper = {
     'convolution': bootstrap_convolution_save_model,
     'esm2_LA_no_lora': bootstrap_LA_no_lora_save_model,
     'esm2_with_classification_head': bootstrap_LM_save_model,
+    'esm2_classification_head_no_lora': bootstrap_classification_head_no_lora_save_model,
 }
 
 def save_model_from_parameters(name: str,model:Union[CNNModel,PeftModel,ESMWithLightAttentionHead],save_dir:str) -> None:
